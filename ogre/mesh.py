@@ -345,52 +345,46 @@ def dot_mesh( ob, path, force_name=None, ignore_shape_animation=False, normals=T
                 obj.select = True
 
             def duplicate_object(scene, name, copyobj):
+                duplicate = copyobj.copy()
+                duplicate.data = copyobj.data.copy()
+                duplicate.name = name
 
-                # Create new mesh
-                mesh = bpy.data.meshes.new(name)
+                bpy.ops.object.select_all(action="DESELECT")
+                bpy.context.scene.objects.active = duplicate
+                duplicate.select = True
 
-                # Create new object associated with the mesh
-                ob_new = bpy.data.objects.new(name, mesh)
+                scene.objects.link(duplicate)
 
-                # Copy data block from the old object into the new object
-                ob_new.data = copyobj.data.copy()
-                ob_new.location = copyobj.location
-                ob_new.rotation_euler = copyobj.rotation_euler
-                ob_new.scale = copyobj.scale
+                # Make sure the duplicate has separate data
+                bpy.ops.object.make_single_user(object=True, obdata=True)
 
-                # Link new object to the given scene and select it
-                scene.objects.link(ob_new)
-                ob_new.select = True
-
-                return ob_new, mesh
+                return duplicate
 
             def delete_object(obj):
                 activate_object(obj)
                 bpy.ops.object.delete()
 
             # todo: Potential infinite recursion creation fails?
-            def get_or_create_modifier(obj, modifier_name):
+            def get_or_create_modifier(obj, modifier, modifier_name):
                 if obj.type != 'MESH':
                     return None
                 # Find modifier
                 for mod_iter in obj.modifiers:
-                    if mod_iter.type == modifier_name:
+                    if (mod_iter.type == modifier and
+                       mod_iter.name == modifier_name):
                         return mod_iter
                 # Not found? Create it and call recurse
                 activate_object(obj)
-                bpy.ops.object.modifier_add(type=modifier_name)
-                return get_or_create_modifier(obj, modifier_name)
+                bpy.ops.object.modifier_add(type=modifier)
+                obj.modifiers[len(obj.modifiers)-1].name = modifier_name
+                return get_or_create_modifier(obj, modifier, modifier_name)
 
             # Create a temporary duplicate
-            ob_copy, ob_copy_mesh = duplicate_object(bpy.context.scene, obj_name + "_LOD_TEMP_COPY", ob)
-            ob_copy_meshes = [ ob_copy.data, ob_copy_mesh ]
-
-            # Apply all of the mofidiers to the object so that the LOD applies to all of the verticies we expect it to (and we don't end up adding any back because of modifiers)
-            for _, modifier in enumerate(ob_copy.modifiers):
-                bpy.ops.object.modifier_apply(modifier=modifier.name)
+            ob_copy = duplicate_object(bpy.context.scene, obj_name + "_LOD_TEMP_COPY", ob)
+            ob_copy_meshes = [ ob_copy.data ]
 
             # Activate clone for modifier manipulation
-            decimate = get_or_create_modifier(ob_copy, 'DECIMATE')
+            decimate = get_or_create_modifier(ob_copy, 'DECIMATE', 'Decimate_LOD')
             if decimate is not None:
                 decimate.decimate_type = 'COLLAPSE'
                 decimate.show_viewport = True
@@ -442,7 +436,7 @@ def dot_mesh( ob, path, force_name=None, ignore_shape_animation=False, normals=T
                         print('        > Writing LOD', lod['level'], 'for distance', lod['distance'], 'and ratio', str(ratio_percent) + "%", 'with', len(lod['mesh'].vertices), 'vertices', len(lod['mesh'].tessfaces), 'faces')
                         lod_ob_temp = bpy.data.objects.new(obj_name, lod['mesh'])
                         lod_ob_temp.data.name = obj_name + '_LOD_' + str(lod['level'])
-                        dot_mesh(lod_ob_temp, path, lod_ob_temp.data.name, ignore_shape_animation, normals, isLOD=True)
+                        dot_mesh(lod_ob_temp, path, lod_ob_temp.data.name, ignore_shape_animation, normals, isLOD=True, overwrite = config.get("MESH_OVERWRITE"))
 
                         # 'value' is the distance this LOD kicks in for the 'Distance' strategy.
                         doc.leaf_tag('lodmanual', {
