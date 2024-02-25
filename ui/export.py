@@ -192,7 +192,7 @@ class _OgreCommonExport_(object):
         description="MESH number of LOD levels",
         min=0, max=32,
         default=config.get('lodLevels'))
-    EX_lodDistance = IntProperty(
+    EX_lodDistance = FloatProperty(
         name="LOD Distance",
         description="MESH distance increment to reduce LOD",
         min=0, max=2000, default=config.get('lodDistance'))

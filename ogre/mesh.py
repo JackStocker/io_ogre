@@ -328,8 +328,12 @@ def dot_mesh( ob, path, force_name=None, ignore_shape_animation=False, normals=T
         if logging:
             print('        Done at', timer_diff_str(start), "seconds")
 
+        # Don't apply LOD for objects with skeletons because we have a separate list of vertices for each LOD (as they are separate meshes)
+        # and the lower LOD objects arn't rendered.
+        arm = ob.find_armature()
+
         # Generate lod levels
-        if isLOD == False and ob.type == 'MESH' and config.get('lodLevels') > 0:
+        if isLOD == False and ob.type == 'MESH' and config.get('lodLevels') > 0 and not arm:
             lod_levels = config.get('lodLevels')
             lod_distance = config.get('lodDistance')
             lod_ratio = config.get('lodPercent') / 100.0
@@ -425,7 +429,7 @@ def dot_mesh( ob, path, force_name=None, ignore_shape_animation=False, normals=T
                     # references to the same vertex indexes in the shared geometry. But the
                     # decimate approach wont work with this as it generates a fresh geometry.
                     doc.start_tag('levelofdetail', {
-                        'strategy'  : 'default',
+                        'strategy'  : 'screen_ratio_pixel_count', # Champion changed, replaced 'default'
                         'numlevels' : str(len(lod_generated) + 1), # The main mesh is + 1 (kind of weird Ogre logic)
                         'manual'    : "true"
                     })
@@ -436,12 +440,12 @@ def dot_mesh( ob, path, force_name=None, ignore_shape_animation=False, normals=T
                         print('        > Writing LOD', lod['level'], 'for distance', lod['distance'], 'and ratio', str(ratio_percent) + "%", 'with', len(lod['mesh'].vertices), 'vertices', len(lod['mesh'].tessfaces), 'faces')
                         lod_ob_temp = bpy.data.objects.new(obj_name, lod['mesh'])
                         lod_ob_temp.data.name = obj_name + '_LOD_' + str(lod['level'])
-                        dot_mesh(lod_ob_temp, path, lod_ob_temp.data.name, ignore_shape_animation, normals, isLOD=True, overwrite = config.get("MESH_OVERWRITE"))
+                        dot_mesh(lod_ob_temp, path + '/LOD/', lod_ob_temp.data.name, ignore_shape_animation, normals, isLOD=True, overwrite = config.get("MESH_OVERWRITE"))
 
                         # 'value' is the distance this LOD kicks in for the 'Distance' strategy.
                         doc.leaf_tag('lodmanual', {
                             'value'    : str(lod['distance']),
-                            'meshname' : lod_ob_temp.data.name + ".mesh"
+                            'meshname' : 'LOD/' + lod_ob_temp.data.name + ".mesh"
                         })
 
                         # Delete temporary LOD object.
@@ -466,7 +470,6 @@ def dot_mesh( ob, path, force_name=None, ignore_shape_animation=False, normals=T
             if lod_pre_mesh_count != len(bpy.data.meshes):
                 print('        - WARNING: After LOD generation, cleanup failed to erase all temporary data!')
 
-        arm = ob.find_armature()
         if arm:
             doc.leaf_tag('skeletonlink', {
                     'name' : '%s.skeleton' % obj_name
