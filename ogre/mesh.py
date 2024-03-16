@@ -393,6 +393,8 @@ def dot_mesh( ob, path, force_name=None, ignore_shape_animation=False, normals=T
                 decimate.decimate_type = 'COLLAPSE'
                 decimate.show_viewport = True
                 decimate.show_render = True
+                decimate.vertex_group = 'DoNotDecimate'
+                decimate.invert_vertex_group = True
 
                 lod_generated = []
                 lod_ratio_multiplier = 1.0 - lod_ratio
