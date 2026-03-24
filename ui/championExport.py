@@ -3,6 +3,7 @@ import sys
 
 sys.path.append('/home/jack/Documents/Projects/Champion/Scripts')
 sys.path.append('E:/Projects/Champion/Scripts')
+sys.path.append('C:/Users/Jack/Syncthing/Champion/Champion/Scripts')
 import championExport
 
 def auto_register(register):

@@ -3,6 +3,7 @@ import sys
 
 sys.path.append('/home/jack/Documents/Projects/Champion/Scripts')
 sys.path.append('E:/Projects/Champion/Scripts')
+sys.path.append('C:/Users/Jack/Syncthing/Champion/Champion/Scripts')
 import championRenderIcons
 
 def auto_register(register):
