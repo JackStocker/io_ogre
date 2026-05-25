@@ -74,10 +74,23 @@ def dot_mesh( ob, path, force_name=None, ignore_shape_animation=False, normals=T
         if logging:
             print('      - Writing shared geometry')
 
+        # Disabled normally all face smoothing by default as Champion now reconstructs normals per pixel in order to reduce vertex duplication
+        #
+        # This has now been changed so we also output smoothed normals for some render effects that require them, but they are ignored for the flat shading.
+        any_faces_smooth = True
+        
+        # Disabled normals generally as it breaks animated models for some reason
+        export_normals = False
+
+        for F in mesh.tessfaces:
+            any_faces_smooth = any_faces_smooth or F.use_smooth
+
+        if logging:
+            print('      - Smooth faces:', any_faces_smooth)
+
         doc.start_tag('vertexbuffer', {
                 'positions':'true',
-                #'normals':'true',
-                'normals':'false',
+                'normals':str(export_normals),
                 'colours_diffuse' : str(bool( mesh.vertex_colors )),
                 'texture_coords' : '%s' % len(mesh.uv_textures) if mesh.uv_textures.active else '0'
         })
@@ -133,16 +146,11 @@ def dot_mesh( ob, path, force_name=None, ignore_shape_animation=False, normals=T
         _remap_verts_ = []
         numverts = 0
 
-        any_faces_smooth = False  # Disabled all face smoothing by default as Champion now reconstructs normals per pixel in order to reduce vertex duplication
-
         for F in mesh.tessfaces:
-            any_faces_smooth = any_faces_smooth or F.use_smooth
+            # Changed so all normals are exported as smooth so we can use them for render effects, but we still keep flat shading in the pixel shader
+            #smooth = F.use_smooth
+            smooth = True
 
-        if logging:
-            print('      - Smooth faces:', any_faces_smooth)
-
-        for F in mesh.tessfaces:
-            smooth = F.use_smooth
             faces = material_faces[ F.material_index ]
             # Ogre only supports triangles
             tris = []
@@ -221,7 +229,7 @@ def dot_mesh( ob, path, force_name=None, ignore_shape_animation=False, normals=T
                             'z' : '%6f' % z
                     })
 
-                    if any_faces_smooth:
+                    if export_normals and any_faces_smooth:
                         doc.leaf_tag('normal', {
                                 'x' : '%6f' % nx,
                                 'y' : '%6f' % ny,

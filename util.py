@@ -79,11 +79,18 @@ def xml_convert(infile, has_uvs=False):
     # Make xml converter print less stuff, comment this if you want more debug info out
     #basicArguments += ' -q'
 
+    ################################################
+    # Extra arguments for OgreMeshTool v2.1
+    basicArguments += ' -O puq' # Optimise for half-precision vertices, normal tangents, UVs, and optimize shadow mapping buffers
+    # '-O puqs' (the extra s for shadows) seems to break animations for Trees
+    ################################################
+
     #opts = '-log _ogre_debug.txt %s' %basicArguments
     opts = '%s' %basicArguments
     path,name = os.path.split( infile )
 
     cmd = list(chain([exe], opts.split(), [infile]))
+    print( cmd )
     exe_path = os.path.dirname(os.path.realpath(exe))
     subprocess.call( cmd, cwd=exe_path)
 
